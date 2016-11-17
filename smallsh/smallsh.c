@@ -18,13 +18,15 @@ void procline(void);
 int inarg(char);
 int gettok(char **); // get token type
 int runcommand(char **, int); // command processing
+int pipecommand(char **, char **, int); // pipe processing
 void handle_int(int); // sigaction handler
 
 // main function
 int main(int argc, char *argv[])
 {
     struct sigaction sa;
-    sa.sa_handler = SIG_IGN;
+    //sa.sa_handler = SIG_IGN;
+    sa.sa_handler = handle_int;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
 
@@ -64,16 +66,23 @@ int userin(char *p) {
 
 // function that decide type of primitives that user inputs.
 void procline(void) {
-    char *arg[MAXBUF+1]; // pointer array for runcommand
+    char *arg[MAXBUF+1]; // pointer array for runcommand or pipecommand
+    char *arg2[MAXBUF+1]; // pointer array for pipecommand
     int toktype; // type of token in command
     int narg;// number of arguments so far
     int type;// FOREGROUND or BACKGROUND
+    int pipe; // is pipe identifier used?
+    int i, narg1;
 
     narg = 0; // reset integer flag
+    pipe = 0;
 
     for (;;) {
-        // take action according token type
-        switch (toktype = gettok(&arg[narg])) {
+        // take action according token type        
+        if (pipe) toktype = gettok(&arg2[narg]);
+        else toktype = gettok(&arg[narg]);
+
+        switch (toktype) {
         case ARG:
             if (narg < MAXARG) narg++;
             break;
@@ -85,12 +94,27 @@ void procline(void) {
             else
                 type = FOREGROUND;
 
-            if (narg != 0) {
-                arg[narg] = NULL;
-                runcommand(arg,type);
+            if (pipe) {
+                if (narg != 0) {
+                    arg[narg1] = NULL;
+                    arg2[narg] = NULL;
+                    pipecommand(arg,arg2,type);
+                }
             }
+            else {
+                if (narg != 0) {
+                    arg[narg] = NULL;
+                    runcommand(arg,type);
+                }
+            }
+
             if (toktype == EOL) return;
             narg = 0;
+            break;
+        case PIPE:
+            narg1 = narg;
+            narg = 0;
+            pipe = 1;
             break;
         default:
             break;
@@ -125,6 +149,9 @@ int gettok(char **outptr) {
     case ';':
         type = SEMICOLON;
         break;
+    case '|': // pipe added
+        type = PIPE;
+        break;
     default:
         type = ARG;
         while(inarg(*ptr)) {
@@ -155,10 +182,7 @@ int runcommand(char **cline, int where) {
     // first change directory command will be processed in parent process
     if (strcmp(*cline,"cd") == 0) {
         chdir(*(cline+1));
-        if (getcwd(path,MAXBUF) != NULL)
-            printf("change directory is : %s\n",path);
-        else
-            perror("getcwd() error");
+        fg_pid = getpid(); // pid update
         return -1;
     }
 
@@ -195,8 +219,15 @@ int runcommand(char **cline, int where) {
 void handle_int(int s) {
     int c;
     if(!fg_pid) {
-        // ctrl+c hit at shell command
-        printf("\n");
+        // ctrl+c and ctrl+\ signal handling
+        switch(s) {
+        case SIGINT:
+            printf("\nSIGINT Received.\n");
+            break;
+        case SIGQUIT:
+            printf("\nSIGQUIT Received.\n");
+            break;
+        }
         exit(1);
     }
     if (intr_p) {
@@ -209,4 +240,49 @@ void handle_int(int s) {
         printf("\nignoring, type ^c again to interrupt\n");
         intr_p = 1;
     }
+}
+
+int pipecommand(char **cline, char **cline2, int where) {
+    // if sentense have only one pipe identifier..
+    pid_t pid, pid2;
+    int status, fds[2];
+    // ignore signal in pipe processing
+    struct sigaction sa_ign, sa_conf;
+    sa_ign.sa_handler = SIG_IGN;
+    sigemptyset(&sa_ign.sa_mask);
+    sa_ign.sa_flags = SA_RESTART;
+
+    sa_conf.sa_handler = handle_int;
+    sigemptyset(&sa_conf.sa_mask);
+    sa_conf.sa_flags = SA_RESTART;
+
+    sigaction(SIGINT,&sa_ign,0);
+    sigaction(SIGQUIT,&sa_ign,0);
+
+    pipe(fds);
+    if((pid = fork()) == 0) {
+        close(STDOUT_FILENO);
+        dup(fds[1]);
+        close(fds[0]);close(fds[1]);
+        execvp(*cline,cline);
+        perror(*cline);
+        exit(127);
+    }
+    if((pid2 = fork()) == 0) {
+        close(STDIN_FILENO);
+        dup(fds[0]);
+        close(fds[1]);close(fds[0]);
+        execvp(*cline2,cline2);
+        perror(*cline2);
+        exit(127);
+    }
+    close(fds[0]);
+    close(fds[1]);
+    if(waitpid(pid,&status,0)==-1) return -1;
+    if(waitpid(pid2,&status,0)==-1) return -1;
+
+    sigaction(SIGINT,&sa_conf,0);
+    sigaction(SIGQUIT,&sa_conf,0);
+    // return value is status
+    return status;
 }

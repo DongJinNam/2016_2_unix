@@ -6,6 +6,7 @@
 #define AMPERSAND 3 // & (background : not wait, foreground : wait)
 #define SEMICOLON 4 // ;
 #define INTERRUPT 5
+#define PIPE 6
 
 #define MAXARG 512 // max command args
 #define MAXBUF 512 // max length input line
