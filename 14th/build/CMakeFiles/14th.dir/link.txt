@@ -1,0 +1,1 @@
+/usr/bin/cc     CMakeFiles/14th.dir/byteOrder.c.o CMakeFiles/14th.dir/TCP_server.c.o CMakeFiles/14th.dir/TCP_client.c.o CMakeFiles/14th.dir/UDP_sender.c.o CMakeFiles/14th.dir/UDP_receiver.c.o  -o 14th -rdynamic 

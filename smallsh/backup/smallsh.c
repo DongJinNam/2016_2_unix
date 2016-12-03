@@ -6,14 +6,20 @@
 #include <sys/wait.h>
 
 //smallsh에 선언된 정적변수들
-//inpbuf : 유저로 부터 입력받는 문자열을 저장, tokbuf : 입력받은 문자열을 token 분할시 사용
 static char inpbuf[MAXBUF], tokbuf[2*MAXBUF], *ptr = inpbuf, *tok = tokbuf;
-static char special[] = {' ','\t','&',';','\n','\0','|'}; // 특수 문자열 모음
+static char special[] = {' ','\t','&',';','\n','\0'};
 char *prompt = "Command>"; // 명령문
-int fg_pid = 0; // foreground process id
-static int fd_in = 0; //pipecommand에서 사용할 입력 파일 디스크립터
+int fg_pid = 0;
 static int pipecnt = 0; //사용된 pipe의 개수
-static int pipefds[2]; //pipecommand에서 사용될 pipe
+
+// smallsh에 선언된 모든 함수들
+int userin(char *);
+void procline(void);
+int inarg(char);
+int gettok(char **); // 매개변수 문자열의 token type을 리턴하는 함수
+int runcommand(char **, int); // smallsh에 입력된 명령어 처리 함수
+int pipecommand(char ***, int); // 파이프 처리 함수
+void handle_int(int); // signal catch 함수
 
 // 메인 함수
 int main(int argc, char *argv[])
@@ -23,7 +29,6 @@ int main(int argc, char *argv[])
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = SA_RESTART;
 
-    //기본적으로 signal Handler 처리 시에 signal을 catch 하도록 한다. (SIGINT, SIGQUIT에 대해)
     sigaction(SIGINT,&sa,0);
     sigaction(SIGQUIT,&sa,0);
 
@@ -60,64 +65,67 @@ int userin(char *p) {
 
 // 사용자로부터 입력받은 명령어들의 type을 결정하는 함수
 void procline(void) {
-    char *arg[MAXBUF+1]; // runcommand 혹은 pipecommand에 사용될 문자열
+    char *arg[MAXBUF+1]; // runcommand 혹은 pipecommand에 사용될 함수
+    char *arg2[MAXBUF+1]; // pointer array for pipecommand
+    char *arg3[MAXBUF+1]; // pointer array for pipecommand
+    char *arg4[MAXBUF+1]; // pointer array for pipecommand
+    char **cline[] = {arg,arg2,arg3,arg4,NULL};
     int toktype; // 입력받은 token의 type
     int narg = 0; // argument 매개변수의 개수
     int type;// FOREGROUND or BACKGROUND
+    int i, index;
 
-    pipecnt = 0; // 파이프 기호가 입력된 경우 0보다 크다, 그렇지 않은 경우 0
+    pipecnt = 0; // if pipe used. pipe > 0
 
     for (;;) {
-        // 입력 문자열 버퍼에 따라서 token type을 설정하고 token 문자열을 얻어온다.
-        toktype = gettok(&arg[narg]);
+        // take action according token type        
+        char **temp = *(cline + pipecnt);
+        toktype = gettok(&temp[narg]);
 
         switch (toktype) {
         case ARG:
             if (narg < MAXARG)
                 narg++;
             break;
-        case EOL: // End of Line
-        case AMPERSAND: // &
-        case SEMICOLON: // ;
+        case EOL:
+        case AMPERSAND:
+        case SEMICOLON:
             if (toktype == AMPERSAND)
                 type = BACKGROUND;
             else
                 type = FOREGROUND;
 
-            if (pipecnt) { // pipecnt > 0 : 파이프 기호가 사용되었다는 의미
+            if (pipecnt) {
                 if (narg != 0) {
-                    arg[narg] = NULL;
-                    pipecommand(arg,1);
+                    temp[narg] = NULL;
+                    pipecommand(cline,type);
                 }
             }
-            else { // 파이프를 사용하지 않은 경우
+            else {
                 if (narg != 0) {
-                    arg[narg] = NULL;
+                    temp[narg] = NULL;
                     runcommand(arg,type);
                 }
             }
 
             if (toktype == EOL) return;
-            narg = 0;
-            pipecnt = 0; // 파이프 관련 변수들 초기화
-            fd_in = 0; // 파이프 관련 변수들 초기화
+            narg =0;
             break;
         case PIPE:
-            if (narg != 0) {
-                arg[narg] = NULL;
-                pipecommand(arg,0);
-            }
-            pipecnt++; // 파이프 기호를 발견할 수록, 파이프 개수를 증가시키도록 한다.
+//            narg1 = narg;
+//            narg = 0;
+            temp[narg] = NULL;
+            pipecnt++;
             narg = 0;
             break;
         default:
             break;
         }
     }
-    pipecnt = 0; // 파이프 개수 초기화
+    pipecnt = 0; // 파이프 초기화
 }
 
-// 문자열이 일반 문열인지 특수 문자열인지 판별하는 함수
+// function that string is special or not special.
 int inarg(char c) {
     char *wrk;
     for (wrk = special; *wrk; wrk++) {
@@ -126,7 +134,7 @@ int inarg(char c) {
     return 1;
 }
 
-// 매개변수 문자열의 token type을 리턴하는 함수
+// function that tokenizing input primitives
 int gettok(char **outptr) {
     int type;
     *outptr = tok;
@@ -144,7 +152,7 @@ int gettok(char **outptr) {
     case ';':
         type = SEMICOLON;
         break;
-    case '|': // 파이프 기호를 추가하였다.
+    case '|': // pipe added
         type = PIPE;
         break;
     default:
@@ -158,12 +166,13 @@ int gettok(char **outptr) {
     return type;
 }
 
-// smallsh에 입력된 명령어 처리 함수
+//function that processing input primitives
 int runcommand(char **cline, int where) {
-    pid_t pid; // 프로세스 id
+    pid_t pid;
     int status;
+    char path[MAXBUF]; // if cd command included, current directory path
 
-    //sa_ign : 시그널을 무시하는 sigaction, sa_conf : 시그널을 handler 함수로 처리하는 sigaction
+    // ignore signal
     struct sigaction sa_ign, sa_conf;
     sa_ign.sa_handler = SIG_IGN;
     sigemptyset(&sa_ign.sa_mask);
@@ -173,19 +182,18 @@ int runcommand(char **cline, int where) {
     sigemptyset(&sa_conf.sa_mask);
     sa_conf.sa_flags = SA_RESTART;
 
-    // cd 명령어가 들어올 시에는 부모 프로세스에서 처리하도록 한다.
+    // first change directory command will be processed in parent process
     if (strcmp(*cline,"cd") == 0) {
         chdir(*(cline+1));
+        fg_pid = getpid(); // pid update
         return -1;
     }
 
-    // cd 명령어 특수 경우를 제외한 나머지 경우는 fork로 자식 프로세스를 만들어서 처리한다.
     switch(pid = fork()) {
         case -1:
             perror("smallsh");
             break;
         case 0:
-            // 자식 프로세스를 실행 중일 때는 SIGINT, SIGQUIT Signal을 무시하도록 한다.
             sigaction(SIGINT,&sa_ign,0);
             sigaction(SIGQUIT,&sa_ign,0);
             execvp(*cline,cline);
@@ -195,14 +203,13 @@ int runcommand(char **cline, int where) {
             fg_pid = pid;
             break;
     }
-    // BACKGROUND 기호는 부모가 자식 프로세스를 기다리지 않는다.
+    // BACKGROUND means parent not wait child process
     if (where == BACKGROUND) {
         fg_pid = 0;
         printf("[Process id %d]\n",pid);
         return 0;
     }
 
-    // 자식 프로세스를 만들고 회수하고 나서는 SIGINT, SIGQUIT signal을 handler로 처리하도록 한다.
     sigaction(SIGINT,&sa_conf,0);
     sigaction(SIGQUIT,&sa_conf,0);
 
@@ -210,35 +217,37 @@ int runcommand(char **cline, int where) {
     return waitpid(pid,&status,0) == -1 ? -1 : status;
 }
 
-//signal handler 함수
-//파라미터는 단순히 시그널 타입 전달용이]다.
+//sigaction handler
+//parameter int not used, but need to exist.s
 void handle_int(int s) {
     switch(s) {
     case SIGINT:
-        // ctrl + c
         printf("\nSIGINT Received.\n");
         break;
     case SIGQUIT:
-        // ctrl + \ //
         printf("\nSIGQUIT Received.\n");
         break;
     }
     if(!fg_pid) {
+        // ctrl+c and ctrl+\ signal handling
         exit(1);
     }
     else {
-        // child process 가 존재하는 경우에는 자식 프로세스를 kill 하도록 한다.
+        //if child process existed, kill the child process
         kill(fg_pid,SIGTERM);
         fg_pid = 0;
     }
 }
 
-// 파이프 명령어가 사용된 경우, 처리하는 함수
-int pipecommand(char **cline, int last) {
-    pid_t pid;
-    int status; // 자식 프로세스가 정상적으로 종료됬는지 확인하는 변수
-
-    //sa_ign : 시그널을 무시하는 sigaction, sa_conf : 시그널을 handler 함수로 처리하는 sigaction
+int pipecommand(char ***cline, int where) {
+    // if sentense have only one pipe identifier..
+    //pid_t pid, pid2;
+    pid_t pid[4] = {0};
+    int status;
+    int fds[2];
+    int narg = 0,i=0;
+    int fd_in =0;
+    // ignore signal in pipe processing
     struct sigaction sa_ign, sa_conf;
     sa_ign.sa_handler = SIG_IGN;
     sigemptyset(&sa_ign.sa_mask);
@@ -251,29 +260,41 @@ int pipecommand(char **cline, int last) {
     sigaction(SIGINT,&sa_ign,0);
     sigaction(SIGQUIT,&sa_ign,0);
 
-    // 파이프 설정
-    pipe(pipefds);
-    switch((pid = fork())) {
-    case -1: // fork 에러 발생 시
-        exit(EXIT_FAILURE);
-    case 0: // 자식 프로세스 내에서
-        dup2(fd_in,0); // stdin filedescriptor 복사
-        if (last == 0) // 마지막이 아닌 경우
-            dup2(pipefds[1],1); // stdout filedescriptor 복사
-        close(pipefds[0]);
-        execvp(*cline,cline); // exec 실행
-        exit(EXIT_FAILURE);
-    default:
-        if(waitpid(pid,&status,0)==-1) return -1; // 자식 프로세스를 기다림
-        close(pipefds[1]);
-        fd_in = pipefds[0]; // 파이프 입력 부분 file descriptor를 fd_in에 저장한다.
-        break;
+    for (i=0;i<pipecnt+1;i++) {
+        pipe(fds);
+        if ((pid[i] = fork())==-1) {
+            exit(EXIT_FAILURE);
+        }
+        else if(pid[i] == 0) {
+            dup2(fd_in,0);
+            if (i!=pipecnt)
+                dup2(fds[1],1);
+            close(fds[0]);
+            execvp((*cline)[0],*cline);
+            exit(EXIT_FAILURE);
+        }
+        else {
+            if (where != BACKGROUND) {
+                if(waitpid(pid[i],&status,0)==-1) return -1;
+            }
+            else {
+                if (i == pipecnt) {
+                    fg_pid = 0;
+                    printf("[Process id %d]\n",pid[pipecnt]);
+                    return 0;
+                }
+                else {
+                    if(waitpid(pid[i],&status,0)==-1) return -1;
+                }
+            }
+            close(fds[1]);
+            fd_in = fds[0];
+            cline++;
+        }
     }
-    if (last) {
-        // 마지막인 경우 파이프 사용을 종료한다.
-        close(pipefds[0]);close(pipefds[1]);
-    }
-    //자식 프로세스의 기능을 모두 사용했으므로, sigaction도 원상태로 돌린다.
+
+    close(fds[0]);close(fds[1]);
+
     sigaction(SIGINT,&sa_conf,0);
     sigaction(SIGQUIT,&sa_conf,0);
     return status;

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+   <FileVersion major="1" minor="6" />
+   <Project>
+      <Option title="14th" />
+      <Option makefile_is_custom="1" />
+      <Option compiler="gcc" />
+      <Option virtualFolders="CMake Files\;" />
+      <Build>
+      <Target title="all">
+         <Option working_dir="/home/ndj/Project/git/2016_2_unix/14th/build" />
+         <Option type="4" />
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 all" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="edit_cache">
+         <Option working_dir="/home/ndj/Project/git/2016_2_unix/14th/build" />
+         <Option type="4" />
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 edit_cache" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="rebuild_cache">
+         <Option working_dir="/home/ndj/Project/git/2016_2_unix/14th/build" />
+         <Option type="4" />
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 rebuild_cache" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="14th">
+         <Option output="/home/ndj/Project/git/2016_2_unix/14th/build/14th" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/home/ndj/Project/git/2016_2_unix/14th/build" />
+         <Option object_output="./" />
+         <Option type="1" />
+         <Option compiler="gcc" />
+         <Compiler>
+            <Add directory="/usr/include" />
+            <Add directory="/usr/include/c++/5" />
+            <Add directory="/usr/include/c++/5/backward" />
+            <Add directory="/usr/include/x86_64-linux-gnu" />
+            <Add directory="/usr/include/x86_64-linux-gnu/c++/5" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
+            <Add directory="/usr/local/include" />
+         </Compiler>
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 14th" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      <Target title="14th/fast">
+         <Option output="/home/ndj/Project/git/2016_2_unix/14th/build/14th" prefix_auto="0" extension_auto="0" />
+         <Option working_dir="/home/ndj/Project/git/2016_2_unix/14th/build" />
+         <Option object_output="./" />
+         <Option type="1" />
+         <Option compiler="gcc" />
+         <Compiler>
+            <Add directory="/usr/include" />
+            <Add directory="/usr/include/c++/5" />
+            <Add directory="/usr/include/c++/5/backward" />
+            <Add directory="/usr/include/x86_64-linux-gnu" />
+            <Add directory="/usr/include/x86_64-linux-gnu/c++/5" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include" />
+            <Add directory="/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed" />
+            <Add directory="/usr/local/include" />
+         </Compiler>
+         <MakeCommands>
+            <Build command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 14th/fast" />
+            <CompileFile command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 &quot;$file&quot;" />
+            <Clean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+            <DistClean command="/usr/bin/make -f &quot;/home/ndj/Project/git/2016_2_unix/14th/build/Makefile&quot;  VERBOSE=1 clean" />
+         </MakeCommands>
+      </Target>
+      </Build>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/TCP_client.c">
+         <Option target="14th"/>
+      </Unit>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/TCP_server.c">
+         <Option target="14th"/>
+      </Unit>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/UDP_receiver.c">
+         <Option target="14th"/>
+      </Unit>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/UDP_sender.c">
+         <Option target="14th"/>
+      </Unit>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/byteOrder.c">
+         <Option target="14th"/>
+      </Unit>
+      <Unit filename="/home/ndj/Project/git/2016_2_unix/14th/CMakeLists.txt">
+          <Option virtualFolder="CMake Files\" />
+      </Unit>
+   </Project>
+</CodeBlocks_project_file>
